@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dashboard</title>
+  </head>
+  <body>
+    <h1>Welcome to the Dashboard</h1>
+
+    <form id="newActivityForm">
+      <label for="newActivityName">New Activity:</label>
+      <input type="text" id="newActivityName" name="newActivityName" required />
+      <input type="submit" value="Add Activity" />
+    </form>
+
+    <form id="recordActivityForm">
+      <label for="activitySelect">Select Activity:</label>
+      <select id="activitySelect">
+        <!-- Existing activities will be populated here by Flask -->
+      </select>
+      <button id="startButton">Start</button>
+      <button id="stopButton" disabled>Stop</button>
+      <p id="timer">0:00:00</p>
+      <label for="notes">Notes:</label>
+      <textarea id="notes"></textarea>
+      <input type="submit" value="Save Record" />
+    </form>
+
+    <script>
+      document
+        .getElementById("newActivityForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          var newActivityName =
+            document.getElementById("newActivityName").value;
+
+          fetch("/add_activity", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: newActivityName }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              var select = document.getElementById("activitySelect");
+              var option = document.createElement("option");
+              option.value = data.id;
+              option.text = data.name;
+              select.add(option);
+            });
+        });
+
+      var startButton = document.getElementById("startButton");
+      var stopButton = document.getElementById("stopButton");
+      var timerElement = document.getElementById("timer");
+      var startTime;
+
+      startButton.addEventListener("click", function () {
+        startTime = new Date();
+        startButton.disabled = true;
+        stopButton.disabled = false;
+      });
+
+      stopButton.addEventListener("click", function () {
+        var endTime = new Date();
+        var elapsedTime = new Date(endTime - startTime);
+        timerElement.textContent =
+          elapsedTime.getHours() +
+          ":" +
+          elapsedTime.getMinutes() +
+          ":" +
+          elapsedTime.getSeconds();
+
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      });
+
+      document
+        .getElementById("recordActivityForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault();
+
+          var activityId = document.getElementById("activitySelect").value;
+          var notes = document.getElementById("notes").value;
+
+          fetch("/add_record", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              activityId: activityId,
+              startTime: startTime,
+              endTime: new Date(),
+              notes: notes,
+            }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              // Handle the response
+            });
+        });
+    </script>
+  </body>
+</html>
