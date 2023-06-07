@@ -2,6 +2,44 @@
 <html>
   <head>
     <title>Dashboard</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Roboto", sans-serif;
+        background-color: #f0f0f0;
+        color: #333;
+        margin: 20;
+        padding: 0;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+        color: #007bff;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
   </head>
   <body>
     <h1>Welcome to the Dashboard</h1>
@@ -55,6 +93,8 @@
       var stopButton = document.getElementById("stopButton");
       var timerElement = document.getElementById("timer");
       var startTime;
+      var endTime;
+      var elapsedTime;
 
       startButton.addEventListener("click", function () {
         startTime = Date.now();
@@ -64,15 +104,16 @@
       });
 
       stopButton.addEventListener("click", function () {
-        var endTime = Date.now();
+        endTime = Date.now();
         console.log(endTime);
-        var elapsedTime = new Date(endTime - startTime);
-        timerElement.textContent =
-          elapsedTime.getHours() +
-          ":" +
-          elapsedTime.getMinutes() +
-          ":" +
-          elapsedTime.getSeconds();
+        elapsedTime = endTime - startTime;
+        console.log(elapsedTime);
+        // timerElement.textContent =
+        //   elapsedTime.getHours() +
+        //   ":" +
+        //   elapsedTime.getMinutes() +
+        //   ":" +
+        //   elapsedTime.getSeconds();
 
         startButton.disabled = false;
         stopButton.disabled = true;
@@ -94,7 +135,7 @@
             body: JSON.stringify({
               activityId: activityId,
               startTime: startTime,
-              endTime: new Date(),
+              endTime: endTime,
               notes: notes,
             }),
           })

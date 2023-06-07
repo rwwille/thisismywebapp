@@ -111,9 +111,12 @@ def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
 
-        start_time = datetime.datetime.fromtimestamp(request.json.get("startTime"))
+        start_time = str(request.json.get("startTime"))[:-3]
+        start_time = datetime.datetime.fromtimestamp(int(start_time))
 
-        end_time = datetime.datetime.fromtimestamp(request.json.get("endTime"))
+        end_time = str(request.json.get("endTime"))[:-3]
+        end_time = datetime.datetime.fromtimestamp(int(end_time))
+
         notes = request.json.get("notes")
 
         new_record = ActivityRecord(
@@ -131,4 +134,4 @@ def add_record():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="192.168.1.73")
