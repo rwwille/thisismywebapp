@@ -57,13 +57,15 @@
       var startTime;
 
       startButton.addEventListener("click", function () {
-        startTime = new Date();
+        startTime = Date.now();
+        console.log(startTime);
         startButton.disabled = true;
         stopButton.disabled = false;
       });
 
       stopButton.addEventListener("click", function () {
-        var endTime = new Date();
+        var endTime = Date.now();
+        console.log(endTime);
         var elapsedTime = new Date(endTime - startTime);
         timerElement.textContent =
           elapsedTime.getHours() +
@@ -98,8 +100,17 @@
           })
             .then((response) => response.json())
             .then((data) => {
-              // Handle the response
-            });
+              if (data.id) {
+                console.log("Record added successfully with ID: " + data.id);
+                // Clear the form fields after successful submission
+                document.getElementById("activitySelect").value = "";
+                document.getElementById("notes").value = "";
+                document.getElementById("timer").textContent = "0:00:00";
+              } else {
+                console.log("An error occurred while adding the record.");
+              }
+            })
+            .catch((error) => console.error("Error:", error));
         });
     </script>
   </body>

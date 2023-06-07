@@ -25,3 +25,32 @@ document.getElementById('newActivityForm').addEventListener('submit', function (
             select.add(option);
         });
 });
+
+// let startTime;
+// let endTime;
+
+// // Assume this function is called when the user starts an activity
+// function startActivity() {
+//     startTime = Date.now();
+// }
+
+// // Assume this function is called when the user ends an activity
+// function endActivity() {
+//     endTime = Date.now();
+
+//     // Now send the start and end times to the server
+//     fetch('/your-flask-route', {
+//         method: 'POST',
+//         headers: {
+//             'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify({
+//             startTime: startTime,
+//             endTime: endTime,
+//             // Include any other data about the activity here
+//         }),
+//     })
+//         .then(response => response.json())
+//         .then(data => console.log('Success:', data))
+//         .catch((error) => console.error('Error:', error));
+// }

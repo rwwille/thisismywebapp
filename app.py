@@ -110,10 +110,10 @@ def add_activity():
 def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
-        start_time = datetime.datetime.fromtimestamp(
-            request.json.get("startTime") / 1000.0
-        )
-        end_time = datetime.datetime.fromtimestamp(request.json.get("endTime") / 1000.0)
+
+        start_time = datetime.datetime.fromtimestamp(request.json.get("startTime"))
+
+        end_time = datetime.datetime.fromtimestamp(request.json.get("endTime"))
         notes = request.json.get("notes")
 
         new_record = ActivityRecord(
