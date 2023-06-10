@@ -54,6 +54,9 @@
       <label for="activitySelect">Select Activity:</label>
       <select id="activitySelect">
         <!-- Existing activities will be populated here by Flask -->
+        {% for activity in activities %}
+        <option value="{{ activity }}">{{ activity }}</option>
+        {% endfor %}
       </select>
       <button id="startButton">Start</button>
       <button id="stopButton" disabled>Stop</button>
@@ -125,6 +128,7 @@
           event.preventDefault();
 
           var activityId = document.getElementById("activitySelect").value;
+          console.log(activityId);
           var notes = document.getElementById("notes").value;
 
           fetch("/add_record", {

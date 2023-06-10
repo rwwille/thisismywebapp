@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 import datetime
 
+
 pymysql.install_as_MySQLdb()
 
 
@@ -15,7 +16,7 @@ my_password = "Ohyeah8!"
 app.config[
     "SQLALCHEMY_DATABASE_URI"
 ] = "mysql+pymysql://root:{}@localhost/timwa_database".format(my_password)
-
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 
@@ -47,6 +48,14 @@ class ActivityRecord(db.Model):
 db.create_all()
 
 
+def get_activity_id(activity_name):
+    activity = Activity.query.filter_by(name=activity_name).first()
+    if activity:
+        return activity.id
+    else:
+        return None
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -68,13 +77,20 @@ def signup():
 @app.route("/signin", methods=["GET", "POST"])
 def signin():
     if request.method == "POST":
+        # these will grab the email and password entered in the fields
         email = request.form.get("email")
         password = request.form.get("password")
 
+        # using the email provided we search DB for record
         user = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password, password):
             session["user"] = {"id": user.id, "email": user.email}
+            # need to figure out why "new@new.com" comes up
+            # print(session["email"])
+
+            # trying to make select activty work
+            # activities = Activity.query.filter_by(user_id=user.id).all()
             return redirect(url_for("dashboard"))
         else:
             return "Invalid email or password", 401
@@ -86,16 +102,23 @@ def signin():
 def dashboard():
     if "user" in session:
         user = User.query.get(session["user"]["id"])
-        return render_template("dashboard.html", user=user, activities=user.activities)
+        print(user.activities)
+        activities = [
+            activity.name for activity in user.activities
+        ]  # assuming activity is an object with a 'name' attribute
+        return render_template("dashboard.html", user=user, activities=activities)
     else:
         return redirect(url_for("signin"))
 
 
-@app.route("/add_activity", methods=["POST"])
+@app.route("/add_activity", methods=["GET", "POST"])
 def add_activity():
     if "user" in session:
         user_id = session["user"]["id"]
+        # print(user_id)
+        # print(session)
         activity_name = request.json.get("name")
+        # print(activity_name)
 
         new_activity = Activity(name=activity_name, user_id=user_id)
         db.session.add(new_activity)
@@ -110,6 +133,8 @@ def add_activity():
 def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
+        activity_id = get_activity_id(activity_id)
+        print(activity_id)
 
         start_time = str(request.json.get("startTime"))[:-3]
         start_time = datetime.datetime.fromtimestamp(int(start_time))
@@ -134,4 +159,4 @@ def add_record():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="192.168.1.73")
+    app.run(debug=True)  # host="192.168.1.73"
