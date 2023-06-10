@@ -12,27 +12,26 @@ app = Flask(__name__)
 app.secret_key = "your secret key"  # replace with a real secret key
 
 my_password = "Ohyeah8!"
-# replace with your actual database URL
+
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:{}@localhost/timwa_database".format(my_password)
+] = "mysql+pymysql://root:{}@localhost/webapp".format(my_password)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    auto_increment = True
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    activites = db.relationship("Activity", backref="user", lazy=True)
 
 
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(80), unique=True, nullable=False)
+    name = db.Column(db.String(120), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    user = db.relationship("User", backref=db.backref("activities", lazy=True))
-    db.create_all()
+    # user = db.relationship("User", backref=db.backref("activities", lazy=True))
 
 
 class ActivityRecord(db.Model):
@@ -41,6 +40,7 @@ class ActivityRecord(db.Model):
     end_time = db.Column(db.DateTime, nullable=False)
     notes = db.Column(db.Text)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     activity = db.relationship("Activity", backref=db.backref("records", lazy=True))
 
@@ -102,10 +102,12 @@ def signin():
 def dashboard():
     if "user" in session:
         user = User.query.get(session["user"]["id"])
-        print(user.activities)
-        activities = [
-            activity.name for activity in user.activities
-        ]  # assuming activity is an object with a 'name' attribute
+        try:
+            activities = [
+                activity.name for activity in user.activities
+            ]  # assuming activity is an object with a 'name' attribute
+        except:
+            activities = None
         return render_template("dashboard.html", user=user, activities=activities)
     else:
         return redirect(url_for("signin"))
@@ -118,7 +120,7 @@ def add_activity():
         # print(user_id)
         # print(session)
         activity_name = request.json.get("name")
-        # print(activity_name)
+        print(activity_name)
 
         new_activity = Activity(name=activity_name, user_id=user_id)
         db.session.add(new_activity)
@@ -129,12 +131,25 @@ def add_activity():
         return "Unauthorized", 401
 
 
+# @app.route("/add_activity", methods=["POST"])
+# def add_activity():
+#     if "user" in session:
+#         user = User.query.get(session["user"]["id"])
+#         print(user)
+#         activity_name = request.json.get("newActivityName")
+#         print("activtiy name = ", activity_name)
+#         activity = Activity(name=activity_name, user_id=user.id)
+#         db.session.add(activity)
+#         db.session.commit()
+#         return jsonify(activity.serialize()), 201
+#     else:
+#         return redirect(url_for("signin"))
+
+
 @app.route("/add_record", methods=["POST"])
 def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
-        activity_id = get_activity_id(activity_id)
-        print(activity_id)
 
         start_time = str(request.json.get("startTime"))[:-3]
         start_time = datetime.datetime.fromtimestamp(int(start_time))
@@ -144,11 +159,14 @@ def add_record():
 
         notes = request.json.get("notes")
 
+        user_id = session["user"]["id"]
+
         new_record = ActivityRecord(
             start_time=start_time,
             end_time=end_time,
             notes=notes,
             activity_id=activity_id,
+            user_id=user_id,
         )
         db.session.add(new_record)
         db.session.commit()

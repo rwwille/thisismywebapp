@@ -1,9 +1,9 @@
-CREATE DATABASE timwa_database;
+CREATE DATABASE webapp;
 
-USE timwa_database;
+USE webapp;
 
 CREATE TABLE user (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL
+    email VARCHAR(80) NOT NULL,
+    password VARCHAR(120) NOT NULL
 );
