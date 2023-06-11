@@ -15,7 +15,7 @@ my_password = "Ohyeah8!"
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:{}@localhost/test2".format(my_password)
+] = "mysql+pymysql://root:{}@localhost/web_app_live".format(my_password)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
@@ -113,7 +113,12 @@ def dashboard():
         user = User.query.get(session["user"]["id"])
         activities = user.activities  # Access the user's activities
         activity_names = [a.name for a in activities]  # Get the names of the activities
-        return render_template("dashboard.html", user=user, activities=activity_names)
+        return render_template(
+            "dashboard.html",
+            user=user,
+            activity_names=activity_names,
+            activities=activities,
+        )
 
     else:
         return redirect(url_for("signin"))
@@ -124,8 +129,6 @@ def add_activity():
     if "user" in session:
         user_id = session["user"]["id"]
         activity_name = request.json.get("name")
-
-        # First, check if the activity already exists.
         activity = Activity.query.filter_by(name=activity_name).first()
         if activity is None:
             # If not, create a new activity.
@@ -153,10 +156,6 @@ def add_record():
             Activity.users.any(id=user_id), Activity.name == activity_id
         ).first()
 
-        # activity_name = request.json.get("activityId")
-        # print(activity_name)
-        # activity = Activity.query.filter_by(name=activity_name).first()
-        # activity_id = activity.id
         start_time = str(request.json.get("startTime"))[:-3]
         start_time = datetime.datetime.fromtimestamp(int(start_time))
         end_time = str(request.json.get("endTime"))[:-3]

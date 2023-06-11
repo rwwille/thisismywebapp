@@ -42,32 +42,30 @@
     </style>
   </head>
   <body>
-    <h1>Welcome to the Dashboard, {{ user.email }}!</h1>
-
+    <h1>Welcome {{ user.email }}!</h1>
     <form id="newActivityForm">
       <label for="newActivityName">New Activity:</label>
       <input type="text" id="newActivityName" name="newActivityName" required />
       <input type="submit" value="Add Activity" />
     </form>
-
     <form id="recordActivityForm">
       <label for="activitySelect">Select Activity:</label>
-      <select id="activitySelect">
-        <!-- Existing activities will be populated here -->
+      <select id="activitySelect" name="activity_id">
         {% if activities is not none %} {% for activity in activities %}
-        <option value="{{ activity }}">{{ activity }}</option>
+        <option value="{{ activity.id }}">{{ activity.name }}</option>
         {% endfor %} {% else %}
         <p>No activities saved yet.</p>
         {% endif %}
       </select>
       <button id="startButton">Start</button>
       <button id="stopButton" disabled>Stop</button>
-      <p id="timer">0:00:00</p>
+      <p id="timer">00:00:00</p>
       <label for="notes">Notes:</label>
       <textarea id="notes"></textarea>
       <input type="submit" value="Save Record" id="saveButton" disabled />
     </form>
 
+    </div>
     <script>
       document
         .getElementById("newActivityForm")
@@ -97,11 +95,54 @@
 
       var startButton = document.getElementById("startButton");
       var stopButton = document.getElementById("stopButton");
-      var timerElement = document.getElementById("timer");
+      var timer = document.getElementById("timer");
+      var resetButton = document.getElementById("saveButton");
       var startTime;
       var endTime;
       var elapsedTime;
 
+      var hours = 0,
+        minutes = 0,
+        seconds = 0,
+        t;
+
+      function add() {
+        seconds++;
+        if (seconds >= 60) {
+          seconds = 0;
+          minutes++;
+          if (minutes >= 60) {
+            minutes = 0;
+            hours++;
+          }
+        }
+
+        timer.textContent =
+          (hours ? (hours > 9 ? hours : "0" + hours) : "00") +
+          ":" +
+          (minutes ? (minutes > 9 ? minutes : "0" + minutes) : "00") +
+          ":" +
+          (seconds > 9 ? seconds : "0" + seconds);
+
+        timerCycle();
+      }
+
+      function timerCycle() {
+        t = setTimeout(add, 1000);
+      }
+
+      startButton.onclick = timerCycle;
+
+      stopButton.onclick = function () {
+        clearTimeout(t);
+      };
+
+      resetButton.onclick = function () {
+        timer.textContent = "0:00:00";
+        seconds = 0;
+        minutes = 0;
+        hours = 0;
+      };
       startButton.addEventListener("click", function () {
         startTime = Date.now();
         console.log(startTime);
@@ -116,13 +157,6 @@
         elapsedTime = endTime - startTime;
         console.log(elapsedTime);
         document.getElementById("saveButton").disabled = false;
-        // timerElement.textContent =
-        //   elapsedTime.getHours() +
-        //   ":" +
-        //   elapsedTime.getMinutes() +
-        //   ":" +
-        //   elapsedTime.getSeconds();
-
         startButton.disabled = false;
         stopButton.disabled = true;
       });
@@ -162,11 +196,18 @@
               }
             })
             .catch((error) => console.error("Error:", error));
-          // document
-          //   .getElementById("stopButton")
-          //   .addEventListener("click", function () {
-          //     document.getElementById("saveButton").disabled = false;
-          //   });
+          document
+            .getElementById("showFormButton")
+            .addEventListener("click", function () {
+              var formContainer = document.getElementById(
+                "newActivityFormContainer"
+              );
+              if (formContainer.style.display === "none") {
+                formContainer.style.display = "block";
+              } else {
+                formContainer.style.display = "none";
+              }
+            });
         });
     </script>
   </body>
