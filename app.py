@@ -15,23 +15,36 @@ my_password = "Ohyeah8!"
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:{}@localhost/webapp".format(my_password)
+] = "mysql+pymysql://root:{}@localhost/test2".format(my_password)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
+# The UserActivity table is created by db.Table, not db.Model.
+# This table does not need an id field, because it's a junction table.
+UserActivity = db.Table(
+    "user_activity",
+    db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
+    db.Column(
+        "activity_id", db.Integer, db.ForeignKey("activity.id"), primary_key=True
+    ),
+)
 
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    activites = db.relationship("Activity", backref="user", lazy=True)
+    # The activities field is now a relationship field.
+    activities = db.relationship(
+        "Activity", secondary=UserActivity, backref=db.backref("users", lazy=True)
+    )
 
 
 class Activity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    # user = db.relationship("User", backref=db.backref("activities", lazy=True))
+    # The user_id field is removed, because an activity can now belong to many users.
+    # The user relationship field is also removed.
 
 
 class ActivityRecord(db.Model):
@@ -41,6 +54,7 @@ class ActivityRecord(db.Model):
     notes = db.Column(db.Text)
     activity_id = db.Column(db.Integer, db.ForeignKey("activity.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    elapsed_time = db.Column(db.Integer, nullable=False)
 
     activity = db.relationship("Activity", backref=db.backref("records", lazy=True))
 
@@ -67,30 +81,25 @@ def signup():
         email = request.form["email"]
         password = generate_password_hash(request.form["password"])
         user = User(email=email, password=password)
+        print(user)
         db.session.add(user)
+        print(db.session)
         db.session.commit()  # save the user
-        session["email"] = email  # log the user in
-        return redirect("/dashboard")
+        session["email"] = email
+        print(session["email"])  # log the user in
+        return redirect("/signin")  # "/signin"
     return render_template("signup.html")
 
 
 @app.route("/signin", methods=["GET", "POST"])
 def signin():
     if request.method == "POST":
-        # these will grab the email and password entered in the fields
         email = request.form.get("email")
         password = request.form.get("password")
-
-        # using the email provided we search DB for record
         user = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password, password):
             session["user"] = {"id": user.id, "email": user.email}
-            # need to figure out why "new@new.com" comes up
-            # print(session["email"])
-
-            # trying to make select activty work
-            # activities = Activity.query.filter_by(user_id=user.id).all()
             return redirect(url_for("dashboard"))
         else:
             return "Invalid email or password", 401
@@ -102,13 +111,10 @@ def signin():
 def dashboard():
     if "user" in session:
         user = User.query.get(session["user"]["id"])
-        try:
-            activities = [
-                activity.name for activity in user.activities
-            ]  # assuming activity is an object with a 'name' attribute
-        except:
-            activities = None
-        return render_template("dashboard.html", user=user, activities=activities)
+        activities = user.activities  # Access the user's activities
+        activity_names = [a.name for a in activities]  # Get the names of the activities
+        return render_template("dashboard.html", user=user, activities=activity_names)
+
     else:
         return redirect(url_for("signin"))
 
@@ -117,56 +123,56 @@ def dashboard():
 def add_activity():
     if "user" in session:
         user_id = session["user"]["id"]
-        # print(user_id)
-        # print(session)
         activity_name = request.json.get("name")
-        print(activity_name)
 
-        new_activity = Activity(name=activity_name, user_id=user_id)
-        db.session.add(new_activity)
+        # First, check if the activity already exists.
+        activity = Activity.query.filter_by(name=activity_name).first()
+        if activity is None:
+            # If not, create a new activity.
+            activity = Activity(name=activity_name)
+            db.session.add(activity)
+
+        # Then, associate the user with the activity.
+        user = User.query.get(user_id)
+        user.activities.append(activity)
+
         db.session.commit()
 
-        return jsonify({"id": new_activity.id, "name": new_activity.name}), 201
+        return jsonify({"id": activity.id, "name": activity.name}), 201
     else:
         return "Unauthorized", 401
-
-
-# @app.route("/add_activity", methods=["POST"])
-# def add_activity():
-#     if "user" in session:
-#         user = User.query.get(session["user"]["id"])
-#         print(user)
-#         activity_name = request.json.get("newActivityName")
-#         print("activtiy name = ", activity_name)
-#         activity = Activity(name=activity_name, user_id=user.id)
-#         db.session.add(activity)
-#         db.session.commit()
-#         return jsonify(activity.serialize()), 201
-#     else:
-#         return redirect(url_for("signin"))
 
 
 @app.route("/add_record", methods=["POST"])
 def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
+        print(activity_id)
+        user_id = session["user"]["id"]
+        activity = Activity.query.filter(
+            Activity.users.any(id=user_id), Activity.name == activity_id
+        ).first()
 
+        # activity_name = request.json.get("activityId")
+        # print(activity_name)
+        # activity = Activity.query.filter_by(name=activity_name).first()
+        # activity_id = activity.id
         start_time = str(request.json.get("startTime"))[:-3]
         start_time = datetime.datetime.fromtimestamp(int(start_time))
-
         end_time = str(request.json.get("endTime"))[:-3]
         end_time = datetime.datetime.fromtimestamp(int(end_time))
 
         notes = request.json.get("notes")
 
         user_id = session["user"]["id"]
-
+        elapsed_time = request.json.get("elapsedTime")
         new_record = ActivityRecord(
             start_time=start_time,
             end_time=end_time,
             notes=notes,
             activity_id=activity_id,
             user_id=user_id,
+            elapsed_time=elapsed_time,
         )
         db.session.add(new_record)
         db.session.commit()
@@ -177,4 +183,4 @@ def add_record():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)  # host="192.168.1.73"
+    app.run(debug=True, host="192.168.1.73")  # host="192.168.1.73"

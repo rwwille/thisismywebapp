@@ -42,7 +42,7 @@
     </style>
   </head>
   <body>
-    <h1>Welcome to the Dashboard</h1>
+    <h1>Welcome to the Dashboard, {{ user.email }}!</h1>
 
     <form id="newActivityForm">
       <label for="newActivityName">New Activity:</label>
@@ -53,7 +53,7 @@
     <form id="recordActivityForm">
       <label for="activitySelect">Select Activity:</label>
       <select id="activitySelect">
-        <!-- Existing activities will be populated here by Flask -->
+        <!-- Existing activities will be populated here -->
         {% if activities is not none %} {% for activity in activities %}
         <option value="{{ activity }}">{{ activity }}</option>
         {% endfor %} {% else %}
@@ -65,7 +65,7 @@
       <p id="timer">0:00:00</p>
       <label for="notes">Notes:</label>
       <textarea id="notes"></textarea>
-      <input type="submit" value="Save Record" />
+      <input type="submit" value="Save Record" id="saveButton" disabled />
     </form>
 
     <script>
@@ -107,6 +107,7 @@
         console.log(startTime);
         startButton.disabled = true;
         stopButton.disabled = false;
+        document.getElementById("saveButton").disabled = true;
       });
 
       stopButton.addEventListener("click", function () {
@@ -114,6 +115,7 @@
         console.log(endTime);
         elapsedTime = endTime - startTime;
         console.log(elapsedTime);
+        document.getElementById("saveButton").disabled = false;
         // timerElement.textContent =
         //   elapsedTime.getHours() +
         //   ":" +
@@ -144,6 +146,7 @@
               startTime: startTime,
               endTime: endTime,
               notes: notes,
+              elapsedTime: elapsedTime,
             }),
           })
             .then((response) => response.json())
@@ -159,6 +162,11 @@
               }
             })
             .catch((error) => console.error("Error:", error));
+          // document
+          //   .getElementById("stopButton")
+          //   .addEventListener("click", function () {
+          //     document.getElementById("saveButton").disabled = false;
+          //   });
         });
     </script>
   </body>

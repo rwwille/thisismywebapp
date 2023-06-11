@@ -1,9 +1,9 @@
-CREATE DATABASE webapp;
+CREATE DATABASE test2;
 
-USE webapp;
+USE test2;
 
 CREATE TABLE user (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(80) NOT NULL,
+    email VARCHAR(80) UNIQUE NOT NULL,
     password VARCHAR(120) NOT NULL
 );
