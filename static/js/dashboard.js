@@ -150,8 +150,7 @@ document.getElementById("activitySelect").addEventListener("change", function ()
             document.getElementById("activityData").innerHTML =
                 '<p>Activity: ' + data.name + '</p>' +
                 '<p>Total Time: ' + data.total_time + '</p>' +
-                '<p>10,000 Hours: ' + data.percent + '</p>';
+                '<p>10,000 Hours: ' + data.percent + '</p>' +
+                '<p>Previous Notes: ' + data.last_prac + '</p>';
         });
 });
-        //         .then(data => {
-        // });

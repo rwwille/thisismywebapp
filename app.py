@@ -184,9 +184,7 @@ def add_record():
 @app.route("/get_activity_data/<activity_name>")
 def get_activity_data(activity_name):
     # Fetch data for the activity from the database
-    print(activity_name)
     activity = Activity.query.filter_by(name=activity_name).first()
-    print(activity)
     if activity is not None:
         records = ActivityRecord.query.filter(
             ActivityRecord.activity_id == activity.id
@@ -211,15 +209,20 @@ def get_activity_data(activity_name):
         if len(str(seconds)) == 1:
             seconds = "0" + str(seconds)
         display_total_time = "{}:{}:{}".format(hours, minutes, seconds)
+
         data = {
             "name": activity.name.upper(),
             "total_time": display_total_time,
             "percent": percent,
         }
+        if activity_name == "guitar":
+            notes = [record.notes for record in records]
+            last_prac = notes[-1:][0].upper()
+            data["last_prac"] = last_prac
     else:
         data = {}
     return jsonify(data)
 
 
 if __name__ == "__main__":
-    app.run(debug=True)  # host="192.168.1.73"
+    app.run(debug=True)  # host="X.X.X.X"
