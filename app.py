@@ -9,9 +9,9 @@ pymysql.install_as_MySQLdb()
 
 
 app = Flask(__name__)
-app.secret_key = "your secret key"  # replace with a real secret key
+app.secret_key = ""
 
-my_password = "Ohyeah8!"
+my_password = ""
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
