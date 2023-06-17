@@ -3,43 +3,9 @@
   <head>
     <title>Dashboard</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
       rel="stylesheet"
+      href="{{ url_for('static', filename='css/dashboard.css') }}"
     />
-    <style>
-      body {
-        font-family: "Roboto", sans-serif;
-        background-color: #f0f0f0;
-        color: #333;
-        margin: 20;
-        padding: 0;
-      }
-      .container {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-      }
-      h1 {
-        text-align: center;
-        color: #007bff;
-      }
-      button {
-        background-color: #007bff;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        text-align: center;
-        text-decoration: none;
-        display: inline-block;
-        font-size: 16px;
-        margin: 4px 2px;
-        cursor: pointer;
-      }
-      button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
-      }
-    </style>
   </head>
   <body>
     <h1>Welcome {{ user.email }}!</h1>
@@ -64,151 +30,9 @@
       <textarea id="notes"></textarea>
       <input type="submit" value="Save Record" id="saveButton" disabled />
     </form>
-
+    <div id="activityData">
+      <p></p>
     </div>
-    <script>
-      document
-        .getElementById("newActivityForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
-
-          const newActivityName =
-            document.getElementById("newActivityName").value;
-          console.log(newActivityName);
-
-          fetch("/add_activity", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ name: newActivityName }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              var select = document.getElementById("activitySelect");
-              var option = document.createElement("option");
-              option.value = data.id;
-              option.text = data.name;
-              select.add(option);
-            });
-        });
-
-      var startButton = document.getElementById("startButton");
-      var stopButton = document.getElementById("stopButton");
-      var timer = document.getElementById("timer");
-      var resetButton = document.getElementById("saveButton");
-      var startTime;
-      var endTime;
-      var elapsedTime;
-
-      var hours = 0,
-        minutes = 0,
-        seconds = 0,
-        t;
-
-      function add() {
-        seconds++;
-        if (seconds >= 60) {
-          seconds = 0;
-          minutes++;
-          if (minutes >= 60) {
-            minutes = 0;
-            hours++;
-          }
-        }
-
-        timer.textContent =
-          (hours ? (hours > 9 ? hours : "0" + hours) : "00") +
-          ":" +
-          (minutes ? (minutes > 9 ? minutes : "0" + minutes) : "00") +
-          ":" +
-          (seconds > 9 ? seconds : "0" + seconds);
-
-        timerCycle();
-      }
-
-      function timerCycle() {
-        t = setTimeout(add, 1000);
-      }
-
-      startButton.onclick = timerCycle;
-
-      stopButton.onclick = function () {
-        clearTimeout(t);
-      };
-
-      resetButton.onclick = function () {
-        timer.textContent = "0:00:00";
-        seconds = 0;
-        minutes = 0;
-        hours = 0;
-      };
-      startButton.addEventListener("click", function () {
-        startTime = Date.now();
-        console.log(startTime);
-        startButton.disabled = true;
-        stopButton.disabled = false;
-        document.getElementById("saveButton").disabled = true;
-      });
-
-      stopButton.addEventListener("click", function () {
-        endTime = Date.now();
-        console.log(endTime);
-        elapsedTime = endTime - startTime;
-        console.log(elapsedTime);
-        document.getElementById("saveButton").disabled = false;
-        startButton.disabled = false;
-        stopButton.disabled = true;
-      });
-
-      document
-        .getElementById("recordActivityForm")
-        .addEventListener("submit", function (event) {
-          event.preventDefault();
-
-          var activityId = document.getElementById("activitySelect").value;
-          console.log(activityId);
-          var notes = document.getElementById("notes").value;
-
-          fetch("/add_record", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              activityId: activityId,
-              startTime: startTime,
-              endTime: endTime,
-              notes: notes,
-              elapsedTime: elapsedTime,
-            }),
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.id) {
-                console.log("Record added successfully with ID: " + data.id);
-                // Clear the form fields after successful submission
-                document.getElementById("activitySelect").value = "";
-                document.getElementById("notes").value = "";
-                document.getElementById("timer").textContent = "0:00:00";
-              } else {
-                console.log("An error occurred while adding the record.");
-              }
-            })
-            .catch((error) => console.error("Error:", error));
-          document
-            .getElementById("showFormButton")
-            .addEventListener("click", function () {
-              var formContainer = document.getElementById(
-                "newActivityFormContainer"
-              );
-              if (formContainer.style.display === "none") {
-                formContainer.style.display = "block";
-              } else {
-                formContainer.style.display = "none";
-              }
-            });
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
 </html>

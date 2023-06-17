@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 import datetime
-
+import math
 
 pymysql.install_as_MySQLdb()
 
@@ -181,5 +181,45 @@ def add_record():
         return "Unauthorized", 401
 
 
+@app.route("/get_activity_data/<activity_name>")
+def get_activity_data(activity_name):
+    # Fetch data for the activity from the database
+    print(activity_name)
+    activity = Activity.query.filter_by(name=activity_name).first()
+    print(activity)
+    if activity is not None:
+        records = ActivityRecord.query.filter(
+            ActivityRecord.activity_id == activity.id
+        ).all()
+        total_time_ms = sum([record.elapsed_time for record in records])
+        ten_k = total_time_ms / 36000000000
+        percent = ten_k * 100
+        percent = str(percent)[:5] + "%"
+        total_time_min = total_time_ms / 60000
+        str_time = str(total_time_min)
+        decimal = str_time.find(".")
+        minutes = int(str_time[:decimal])
+        if minutes >= 60:
+            hours = math.floor(minutes / 60)
+            minutes = minutes % 60
+        else:
+            hours = "0"
+        if len(str(minutes)) == 1:
+            minutes = "0" + str(minutes)
+        seconds = float(str_time[decimal:]) * 60
+        seconds = math.floor(seconds)
+        if len(str(seconds)) == 1:
+            seconds = "0" + str(seconds)
+        display_total_time = "{}:{}:{}".format(hours, minutes, seconds)
+        data = {
+            "name": activity.name.upper(),
+            "total_time": display_total_time,
+            "percent": percent,
+        }
+    else:
+        data = {}
+    return jsonify(data)
+
+
 if __name__ == "__main__":
-    app.run(debug=True, host="192.168.1.73")  # host="192.168.1.73"
+    app.run(debug=True)  # host="192.168.1.73"
