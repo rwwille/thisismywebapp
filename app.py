@@ -9,9 +9,9 @@ pymysql.install_as_MySQLdb()
 
 
 app = Flask(__name__)
-app.secret_key = ""
+app.secret_key = "your secret key"
 
-my_password = ""
+my_password = "Ohyeah8!"
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
@@ -209,20 +209,18 @@ def get_activity_data(activity_name):
         if len(str(seconds)) == 1:
             seconds = "0" + str(seconds)
         display_total_time = "{}:{}:{}".format(hours, minutes, seconds)
-
+        notes = [record.notes for record in records]
+        last_prac = notes[-1:][0].upper()
         data = {
             "name": activity.name.upper(),
             "total_time": display_total_time,
             "percent": percent,
+            "last_prac": last_prac,
         }
-        if activity_name == "guitar":
-            notes = [record.notes for record in records]
-            last_prac = notes[-1:][0].upper()
-            data["last_prac"] = last_prac
     else:
         data = {}
     return jsonify(data)
 
 
 if __name__ == "__main__":
-    app.run(debug=True)  # host="X.X.X.X"
+    app.run(debug=True, host="192.168.1.73")  # host="X.X.X.X"
