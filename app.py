@@ -223,4 +223,4 @@ def get_activity_data(activity_name):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="192.168.1.73")  # host="X.X.X.X"
+    app.run(debug=True)  # host="X.X.X.X"
