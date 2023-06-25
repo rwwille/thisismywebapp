@@ -9,15 +9,16 @@ pymysql.install_as_MySQLdb()
 
 
 app = Flask(__name__)
-app.secret_key = "your secret key"
-
-my_password = "Ohyeah8!"
+app.secret_key = "a very secret key"
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:{}@localhost/web_app_live".format(my_password)
+] = "mysql+pymysql://root:Ohyeah8!@localhost/web_app_live"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
+with app.app_context():
+    db.create_all()
 
 # The UserActivity table is created by db.Table, not db.Model.
 # This table does not need an id field, because it's a junction table.
@@ -59,7 +60,7 @@ class ActivityRecord(db.Model):
     activity = db.relationship("Activity", backref=db.backref("records", lazy=True))
 
 
-db.create_all()
+# db.create_all()
 
 
 def get_activity_id(activity_name):
