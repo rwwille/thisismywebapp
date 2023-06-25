@@ -150,7 +150,6 @@ def add_activity():
 def add_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
-        print(activity_id)
         user_id = session["user"]["id"]
         activity = Activity.query.filter(
             Activity.users.any(id=user_id), Activity.name == activity_id

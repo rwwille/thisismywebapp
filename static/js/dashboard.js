@@ -122,24 +122,27 @@ document
                     document.getElementById("activitySelect").value = "";
                     document.getElementById("notes").value = "";
                     document.getElementById("timer").textContent = "0:00:00";
+                    // Make the element with id="activityData" not visible
+                    document.getElementById("activityData").style.display = "none";
                 } else {
                     console.log("An error occurred while adding the record.");
                 }
             })
             .catch((error) => console.error("Error:", error));
-        document
-            .getElementById("showFormButton")
-            .addEventListener("click", function () {
-                var formContainer = document.getElementById(
-                    "newActivityFormContainer"
-                );
-                if (formContainer.style.display === "none") {
-                    formContainer.style.display = "block";
-                } else {
-                    formContainer.style.display = "none";
-                }
-            })
     });
+// document
+//     .getElementById("showFormButton")
+//     .addEventListener("click", function () {
+//         var formContainer = document.getElementById(
+//             "newActivityFormContainer"
+//         );
+//         if (formContainer.style.display === "none") {
+//             formContainer.style.display = "block";
+//         } else {
+//             formContainer.style.display = "none";
+//         }
+//     })
+// });
 document.getElementById("activitySelect").addEventListener("change", function () {
     var sel = document.getElementById("activitySelect");
     var selectedActivity = sel.options[sel.selectedIndex].text;
@@ -152,5 +155,7 @@ document.getElementById("activitySelect").addEventListener("change", function ()
                 '<p>Total Time: ' + data.total_time + '</p>' +
                 '<p>10,000 Hours: ' + data.percent + '</p>' +
                 '<p>Previous Notes: ' + data.last_prac + '</p>';
+            document.getElementById("activityData").style.display = "block";
+
         });
 });
