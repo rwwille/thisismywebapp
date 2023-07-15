@@ -13,12 +13,9 @@ app.secret_key = "a very secret key"
 
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:Ohyeah8!@localhost/web_app_live"
+] = "mysql+pymysql://root:Ohyeah8!@localhost/timwa_62523"  # web_app_live for local machine
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
-
-with app.app_context():
-    db.create_all()
 
 # The UserActivity table is created by db.Table, not db.Model.
 # This table does not need an id field, because it's a junction table.
@@ -60,7 +57,8 @@ class ActivityRecord(db.Model):
     activity = db.relationship("Activity", backref=db.backref("records", lazy=True))
 
 
-# db.create_all()
+with app.app_context():
+    db.create_all()
 
 
 def get_activity_id(activity_name):
@@ -82,9 +80,7 @@ def signup():
         email = request.form["email"]
         password = generate_password_hash(request.form["password"])
         user = User(email=email, password=password)
-        print(user)
         db.session.add(user)
-        print(db.session)
         db.session.commit()  # save the user
         session["email"] = email
         print(session["email"])  # log the user in
@@ -189,6 +185,11 @@ def get_activity_data(activity_name):
         records = ActivityRecord.query.filter(
             ActivityRecord.activity_id == activity.id
         ).all()
+
+        last_pt = str(records[-1].elapsed_time / 60000).split(".")
+        last_pt[1] = str(round(float("." + last_pt[1]) * 60))
+        last_pt = last_pt[0] + ":" + last_pt[1]
+
         total_time_ms = sum([record.elapsed_time for record in records])
         ten_k = total_time_ms / 36000000000
         percent = ten_k * 100
@@ -216,6 +217,7 @@ def get_activity_data(activity_name):
             "total_time": display_total_time,
             "percent": percent,
             "last_prac": last_prac,
+            "last_pt": last_pt,
         }
     else:
         data = {}
@@ -223,4 +225,4 @@ def get_activity_data(activity_name):
 
 
 if __name__ == "__main__":
-    app.run(debug=False)  # host="X.X.X.X"
+    app.run(debug=True)  # host="X.X.X.X"

@@ -1,6 +1,6 @@
-CREATE DATABASE web_app_live;
+CREATE DATABASE timwa_62523;
 
-USE web_app_live;
+USE timwa_62523;
 
 CREATE TABLE user (
     id INT AUTO_INCREMENT PRIMARY KEY,

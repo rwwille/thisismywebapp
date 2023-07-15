@@ -154,7 +154,7 @@ document.getElementById("activitySelect").addEventListener("change", function ()
                 '<p>Activity: ' + data.name + '</p>' +
                 '<p>Total Time: ' + data.total_time + '</p>' +
                 '<p>10,000 Hours: ' + data.percent + '</p>' +
-                '<p>Previous Notes: ' + data.last_prac + '</p>';
+                '<p>Previous: ' + data.last_pt + " --- " + data.last_prac + '</p>';
             document.getElementById("activityData").style.display = "block";
 
         });
