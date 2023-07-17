@@ -11,9 +11,13 @@ pymysql.install_as_MySQLdb()
 app = Flask(__name__)
 app.secret_key = "a very secret key"
 
+password = " "
+
 app.config[
     "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:Ohyeah8!@localhost/timwa_62523"  # web_app_live for local machine
+] = "mysql+pymysql://root:{}@localhost/timwa_62523".format(
+    password
+)  # web_app_live for local machine
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
@@ -225,4 +229,4 @@ def get_activity_data(activity_name):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)  # host="X.X.X.X"
+    app.run(debug=True)  # host="0.0.0.0"
