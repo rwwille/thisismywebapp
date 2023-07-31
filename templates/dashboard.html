@@ -9,28 +9,54 @@
   </head>
   <body>
     <h1>Welcome {{ user.email }}!</h1>
-    <form id="newActivityForm">
-      <label for="newActivityName">New Activity:</label>
-      <input type="text" id="newActivityName" name="newActivityName" required />
-      <input type="submit" value="Add Activity" />
-    </form>
-    <form id="recordActivityForm">
-      <label for="activitySelect">Select Activity:</label>
-      <select id="activitySelect" name="activity_id">
-        {% if activities is not none %} {% for activity in activities %}
-        <option value="{{ activity.id }}">{{ activity.name }}</option>
-        {% endfor %} {% else %}
-        <p>No activities saved yet.</p>
-        {% endif %}
-      </select>
-      <button id="startButton">Start</button>
-      <button id="stopButton" disabled>Stop</button>
-      <p id="timer">00:00:00</p>
-      <label for="notes">Notes:</label>
-      <textarea id="notes"></textarea>
-      <input type="submit" value="Save Record" id="saveButton" disabled />
-    </form>
-    <div id="activityData"></div>
+    <div id="activitySection">
+      <h2>Activity Recorder</h2>
+      <form id="newActivityForm">
+        <label for="newActivityName">New Activity:</label>
+        <input
+          type="text"
+          id="newActivityName"
+          name="newActivityName"
+          required
+        />
+        <input type="submit" value="Add Activity" />
+      </form>
+      <form id="recordActivityForm">
+        <label for="activitySelect">Select Activity:</label>
+        <select id="activitySelect" name="activity_id">
+          {% if activities is not none %} {% for activity in activities %}
+          <option value="{{ activity.id }}">{{ activity.name }}</option>
+          {% endfor %} {% else %}
+          <p>No activities saved yet.</p>
+          {% endif %}
+        </select>
+        <button id="startButton">Start</button>
+        <button id="stopButton" disabled>Stop</button>
+        <p id="timer">00:00:00</p>
+        <label for="notes">Notes:</label>
+        <textarea id="notes"></textarea>
+        <input type="submit" value="Save Record" id="saveButton" disabled />
+      </form>
+      <div id="activityData"></div>
+    </div>
+    <div id="habitsSection">
+      <h2>Habit Tracker</h2>
+      <form id="habitsForm">
+        <label for="habitName">Habit Name:</label>
+        <input type="text" id="habitName" name="habitName" required />
+        <input type="submit" value="Add Habit" />
+      </form>
+      <div id="habitsList">
+        {% for habit_name in habit_names %}
+        <input type="checkbox" name="habit" value="{{ habit_name }}" />
+        <label>{{ habit_name }}</label><br />
+        {% endfor %}
+      </div>
+    </div>
+    <div
+      id="habitsList"
+      data-completed-habits="{{ completed_habit_ids | tojson }}"
+    ></div>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
 </html>

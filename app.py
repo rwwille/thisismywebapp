@@ -4,25 +4,21 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
 import datetime
 import math
+import config
 
 pymysql.install_as_MySQLdb()
 
-
 app = Flask(__name__)
-app.secret_key = "a very secret key"
+app.secret_key = config.app_secret_key
 
-password = " "
-
-app.config[
-    "SQLALCHEMY_DATABASE_URI"
-] = "mysql+pymysql://root:{}@localhost/timwa_62523".format(
-    password
-)  # web_app_live for local machine
+app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:{}@localhost/{}".format(
+    config.password, config.database
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 db = SQLAlchemy(app)
 
-# The UserActivity table is created by db.Table, not db.Model.
-# This table does not need an id field, because it's a junction table.
+# junction table
 UserActivity = db.Table(
     "user_activity",
     db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
@@ -31,15 +27,37 @@ UserActivity = db.Table(
     ),
 )
 
+UserHabit = db.Table(
+    "user_habit",
+    db.Column("user_id", db.Integer, db.ForeignKey("user.id"), primary_key=True),
+    db.Column("habit_id", db.Integer, db.ForeignKey("habit.id"), primary_key=True),
+    extend_existing=True,
+)
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    # The activities field is now a relationship field.
     activities = db.relationship(
         "Activity", secondary=UserActivity, backref=db.backref("users", lazy=True)
     )
+    # Change the backref name to 'user_habits' to avoid conflicts.
+    user_habits = db.relationship("Habit", secondary=UserHabit, back_populates="users")
+
+
+class Habit(db.Model):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(100), nullable=False)
+
+    # Use the correct back_populates value for the user_habits relationship.
+    users = db.relationship("User", secondary=UserHabit, back_populates="user_habits")
+
+    def is_completed_today(self):
+        today = datetime.date.today()
+        # Assuming you have a relationship between Habit and ActivityRecord called "activity_records"
+        # Check if there is any activity record for the current date
+        return any(record.date_completed == today for record in self.habit_records)
 
 
 class Activity(db.Model):
@@ -59,6 +77,17 @@ class ActivityRecord(db.Model):
     elapsed_time = db.Column(db.Integer, nullable=False)
 
     activity = db.relationship("Activity", backref=db.backref("records", lazy=True))
+
+
+class HabitRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    habit_id = db.Column(db.Integer, db.ForeignKey("habit.id"), nullable=False)
+    date_completed = db.Column(db.Date, nullable=False, default=datetime.date.today)
+
+    # Add the relationships to the User and Habit models
+    user = db.relationship("User", backref=db.backref("habit_records", lazy=True))
+    habit = db.relationship("Habit", backref=db.backref("habit_records", lazy=True))
 
 
 with app.app_context():
@@ -101,6 +130,18 @@ def signin():
 
         if user and check_password_hash(user.password, password):
             session["user"] = {"id": user.id, "email": user.email}
+
+            # Retrieve habit_record data for the user
+            user_habit_records = HabitRecord.query.filter_by(user_id=user.id).all()
+
+            # Check if the habits have been completed for today
+            for record in user_habit_records:
+                if record.date_completed == datetime.date.today():
+                    # Mark the habit as completed in the frontend (JavaScript)
+                    record_id = f"habit_{record.habit_id}"
+                    session["completed_habits"] = session.get("completed_habits", [])
+                    session["completed_habits"].append(record_id)
+
             return redirect(url_for("dashboard"))
         else:
             return "Invalid email or password", 401
@@ -112,20 +153,28 @@ def signin():
 def dashboard():
     if "user" in session:
         user = User.query.get(session["user"]["id"])
-        activities = user.activities  # Access the user's activities
-        activity_names = [a.name for a in activities]  # Get the names of the activities
+        activities = user.activities
+        habits = user.user_habits
+        activity_names = [a.name for a in activities]
+        habit_names = [h.name for h in habits]
+        print(habit_names)
+        completed_habit_ids = [
+            habit.id for habit in habits if habit.is_completed_today()
+        ]  # Replace this with the appropriate method to check if the habit is completed today
+        print(completed_habit_ids)
         return render_template(
             "dashboard.html",
             user=user,
             activity_names=activity_names,
             activities=activities,
+            habit_names=habit_names,
+            completed_habit_ids=completed_habit_ids,
         )
-
     else:
         return redirect(url_for("signin"))
 
 
-@app.route("/add_activity", methods=["GET", "POST"])
+@app.route("/add_activity", methods=["POST"])
 def add_activity():
     if "user" in session:
         user_id = session["user"]["id"]
@@ -135,16 +184,33 @@ def add_activity():
             # If not, create a new activity.
             activity = Activity(name=activity_name)
             db.session.add(activity)
-
         # Then, associate the user with the activity.
         user = User.query.get(user_id)
         user.activities.append(activity)
-
         db.session.commit()
-
         return jsonify({"id": activity.id, "name": activity.name}), 201
     else:
         return "Unauthorized", 401
+
+
+@app.route("/add_habit", methods=["POST"])
+def add_habit():
+    if "user" in session:
+        user_id = session["user"]["id"]
+        new_habit = request.json.get("name")
+        print(new_habit)
+        habit = Habit.query.filter_by(name=new_habit).first()
+        if habit is None:
+            habit = Habit(name=new_habit)
+            db.session.add(habit)
+        user = User.query.get(user_id)
+        user.user_habits.append(habit)
+        db.session.commit()
+        print("You are most successful!")
+        return redirect(
+            url_for("dashboard")
+        )  # Redirect to the dashboard after adding the habit
+    return jsonify({"id": habit.id, "name": habit.name}), 201
 
 
 @app.route("/add_record", methods=["POST"])
@@ -226,6 +292,80 @@ def get_activity_data(activity_name):
     else:
         data = {}
     return jsonify(data)
+
+
+@app.route("/complete_habit", methods=["POST"])
+def complete_habit():
+    if "user" in session:
+        user_id = session["user"]["id"]
+        habit_name = request.json.get("habit_id")
+        habit = Habit.query.filter_by(name=habit_name).first()
+        print(user_id, habit.id)
+
+        # Check if the habit is already recorded for today
+        today = datetime.date.today()
+        existing_record = HabitRecord.query.filter_by(
+            user_id=user_id, habit_id=habit.id, date_completed=today
+        ).first()
+
+        if not existing_record:
+            # Record the completed habit for today
+            habit_record = HabitRecord(user_id=user_id, habit_id=habit.id)
+            db.session.add(habit_record)
+            db.session.commit()
+
+        return jsonify({"status": "success"}), 200
+
+    else:
+        return jsonify({"status": "error", "message": "User not logged in"}), 401
+
+
+@app.route("/mark_habit_completed/<string:habit_name>", methods=["POST"])
+def mark_habit_completed(habit_name):
+    # First, check if the user is logged in. If not, return an error response.
+    if "user" not in session:
+        return jsonify({"error": "User not logged in"}), 401
+
+    user_id = session["user"]["id"]
+    print(habit_name)
+    habit_id = Habit.query.filter_by(name=habit_name).first()
+    print(habit_id.id)
+    today = datetime.datetime.today()
+    user_habit = UserHabit.query.filter_by(
+        user_id=user_id, habit_id=habit_id.id
+    ).first()
+    if user_habit and user_habit.completed_on == today:
+        return jsonify({"message": "Habit already marked as completed for today"}), 200
+
+    # If the user does not have the habit marked as completed for today, update the database.
+    if not user_habit:
+        user_habit = UserHabit(user_id=user_id, habit_id=habit_id)
+
+    user_habit.completed_on = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({"message": "Habit marked as completed"}), 200
+
+
+@app.route("/unmark_habit_completed/<int:habit_id>", methods=["POST"])
+def unmark_habit_completed(habit_id):
+    # First, check if the user is logged in. If not, return an error response.
+    if "user" not in session:
+        return jsonify({"error": "User not logged in"}), 401
+
+    user_id = session["user"]["id"]
+
+    # Check if the user has the habit marked as completed.
+    # If not, we don't need to do anything and can return a success response.
+    user_habit = UserHabit.query.filter_by(user_id=user_id, habit_id=habit_id).first()
+    if not user_habit or not user_habit.completed_on:
+        return jsonify({"message": "Habit not marked as completed"}), 200
+
+    # If the user has the habit marked as completed, unmark it by setting completed_on to None.
+    user_habit.completed_on = None
+    db.session.commit()
+
+    return jsonify({"message": "Habit unmarked as completed"}), 200
 
 
 if __name__ == "__main__":

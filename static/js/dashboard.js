@@ -130,19 +130,8 @@ document
             })
             .catch((error) => console.error("Error:", error));
     });
-// document
-//     .getElementById("showFormButton")
-//     .addEventListener("click", function () {
-//         var formContainer = document.getElementById(
-//             "newActivityFormContainer"
-//         );
-//         if (formContainer.style.display === "none") {
-//             formContainer.style.display = "block";
-//         } else {
-//             formContainer.style.display = "none";
-//         }
-//     })
-// });
+
+
 document.getElementById("activitySelect").addEventListener("change", function () {
     var sel = document.getElementById("activitySelect");
     var selectedActivity = sel.options[sel.selectedIndex].text;
@@ -158,4 +147,137 @@ document.getElementById("activitySelect").addEventListener("change", function ()
             document.getElementById("activityData").style.display = "block";
 
         });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const habitsList = document.getElementById("habitsList");
+
+        // Fetch the list of habit names from the server
+        fetch("/get_habit_names")
+            .then((response) => response.json())
+            .then((data) => {
+                const habitNames = data.habit_names;
+                for (const habitName of habitNames) {
+                    // Create a new checkbox element for each habit
+                    const checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.name = "habit";
+                    checkbox.value = habitName;
+
+                    // Create a label for the checkbox
+                    const label = document.createElement("label");
+                    label.textContent = habitName;
+
+                    // Append the checkbox and label to the habitsList element
+                    habitsList.appendChild(checkbox);
+                    habitsList.appendChild(label);
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching habit names:", error);
+            });
+    });
+
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Get the list of habits
+    const habitsList = document.getElementById("habitsList");
+    console.log(habitsList)
+    // Get the completed habits from the session (if any)
+    const sessionCompletedHabits = JSON.parse(habitsList.getAttribute("data-completed-habits"));
+    console.log(sessionCompletedHabits)
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name="habit"]');
+    console.log(checkboxes)
+    // Function to check if a habit is completed for today
+    function isHabitCompleted(habitId) {
+        return sessionCompletedHabits && sessionCompletedHabits.includes(habitId);
+    }
+
+    // Function to update the appearance of the habit checkbox
+    function updateHabitAppearance(habitId) {
+        const habitElement = document.querySelector(`input[type="checkbox"][name="habit"][value="${habitId}"]`);
+        if (isHabitCompleted(habitId)) {
+            habitElement.checked = true;
+            habitElement.nextElementSibling.classList.add("done");
+        } else {
+            habitElement.checked = false;
+            habitElement.nextElementSibling.classList.remove("done");
+        }
+    }
+
+    // Call this function for each habit to update their appearance
+    const habitCheckboxes = document.querySelectorAll('input[type="checkbox"][name="habit"]');
+    habitCheckboxes.forEach((checkbox) => {
+        const habitName = checkbox.value;
+        updateHabitAppearance(habitName);
+    });
+    // // Update the appearance of habits on page load
+    // checkboxes.forEach((checkbox) => {
+    //     const habitId = checkbox.value;
+    //     updateHabitAppearance(habitId);
+    // });
+    // Add event listener to update habit appearance on checkbox change
+    habitCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener("change", function () {
+            const habitName = this.value;
+            const completed = this.checked;
+            if (completed) {
+                markHabitCompleted(habitName);
+            } else {
+                unmarkHabitCompleted(habitName);
+            }
+        });
+    });
+
+    // Add event listener to update habit appearance on checkbox change
+    //     checkboxes.forEach((checkbox) => {
+    //         checkbox.addEventListener("change", function () {
+    //             const habitId = this.value;
+    //             const completed = this.checked;
+    //             if (completed) {
+    //                 markHabitCompleted(habitId);
+    //             } else {
+    //                 unmarkHabitCompleted(habitId);
+    //             }
+    //         });
+    //     });
+});
+// Function to handle marking a habit as completed
+function markHabitCompleted(habitId) {
+    fetch(`/mark_habit_completed/${habitId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            // If the request is successful, update the appearance of the habit to indicate it's completed.
+            if (data.message === "Habit marked as completed") {
+                updateHabitAppearance(habitId);
+            }
+        })
+        .catch((error) => {
+            console.error("Error completing habit:", error);
+        });
+}
+
+// Function to handle unmarking a habit as completed
+function unmarkHabitCompleted(habitId) {
+    fetch(`/unmark_habit_completed/${habitId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            // If the request is successful, update the appearance of the habit to indicate it's not completed.
+            if (data.message === "Habit unmarked as completed") {
+                updateHabitAppearance(habitId);
+            }
+        })
+        .catch((error) => {
+            console.error("Error unmarking habit:", error);
+        });
+}

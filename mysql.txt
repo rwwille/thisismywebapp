@@ -1,6 +1,6 @@
-CREATE DATABASE timwa_62523;
+CREATE DATABASE wal_habits;
 
-USE timwa_62523;
+USE wal_habits;
 
 CREATE TABLE user (
     id INT AUTO_INCREMENT PRIMARY KEY,
