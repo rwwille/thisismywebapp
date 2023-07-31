@@ -102,6 +102,16 @@ def get_activity_id(activity_name):
         return None
 
 
+def is_today2():
+    return datetime.datetime.combine(
+        datetime.date.today(), datetime.datetime.min.time()
+    )
+
+
+def is_today():
+    return datetime.date.today()
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -213,8 +223,8 @@ def add_habit():
     return jsonify({"id": habit.id, "name": habit.name}), 201
 
 
-@app.route("/add_record", methods=["POST"])
-def add_record():
+@app.route("/save_record", methods=["POST"])
+def save_record():
     if "user" in session:
         activity_id = request.json.get("activityId")
         user_id = session["user"]["id"]
@@ -294,11 +304,38 @@ def get_activity_data(activity_name):
     return jsonify(data)
 
 
-@app.route("/complete_habit", methods=["POST"])
-def complete_habit():
+# I DONT THINK ANYTHING IS CALLING THIS???
+# @app.route("/complete_habit", methods=["POST"])
+# def complete_habit():
+#     if "user" in session:
+#         user_id = session["user"]["id"]
+#         habit_name = request.json.get("habit_id")
+#         habit = Habit.query.filter_by(name=habit_name).first()
+#         print(user_id, habit.id)
+
+#         # Check if the habit is already recorded for today
+#         today = datetime.date.today()
+#         existing_record = HabitRecord.query.filter_by(
+#             user_id=user_id, habit_id=habit.id, date_completed=today
+#         ).first()
+
+#         if not existing_record:
+#             # Record the completed habit for today
+#             habit_record = HabitRecord(user_id=user_id, habit_id=habit.id)
+#             db.session.add(habit_record)
+#             db.session.commit()
+
+#         return jsonify({"status": "success"}), 200
+
+#     else:
+#         return jsonify({"status": "error", "message": "User not logged in"}), 401
+
+
+@app.route("/mark_habit_completed/<string:habit_name>", methods=["POST"])
+def mark_habit_completed(habit_name):
     if "user" in session:
+        print(habit_name)
         user_id = session["user"]["id"]
-        habit_name = request.json.get("habit_id")
         habit = Habit.query.filter_by(name=habit_name).first()
         print(user_id, habit.id)
 
@@ -320,33 +357,7 @@ def complete_habit():
         return jsonify({"status": "error", "message": "User not logged in"}), 401
 
 
-@app.route("/mark_habit_completed/<string:habit_name>", methods=["POST"])
-def mark_habit_completed(habit_name):
-    # First, check if the user is logged in. If not, return an error response.
-    if "user" not in session:
-        return jsonify({"error": "User not logged in"}), 401
-
-    user_id = session["user"]["id"]
-    print(habit_name)
-    habit_id = Habit.query.filter_by(name=habit_name).first()
-    print(habit_id.id)
-    today = datetime.datetime.today()
-    user_habit = UserHabit.query.filter_by(
-        user_id=user_id, habit_id=habit_id.id
-    ).first()
-    if user_habit and user_habit.completed_on == today:
-        return jsonify({"message": "Habit already marked as completed for today"}), 200
-
-    # If the user does not have the habit marked as completed for today, update the database.
-    if not user_habit:
-        user_habit = UserHabit(user_id=user_id, habit_id=habit_id)
-
-    user_habit.completed_on = datetime.utcnow()
-    db.session.commit()
-
-    return jsonify({"message": "Habit marked as completed"}), 200
-
-
+# THIS NEEDS WORK
 @app.route("/unmark_habit_completed/<int:habit_id>", methods=["POST"])
 def unmark_habit_completed(habit_id):
     # First, check if the user is logged in. If not, return an error response.
@@ -368,5 +379,18 @@ def unmark_habit_completed(habit_id):
     return jsonify({"message": "Habit unmarked as completed"}), 200
 
 
+@app.route("/get_completed_habits", methods=["GET"])
+def get_completed_habits():
+    if "user" in session:
+        print(is_today())
+        user_id = session["user"]["id"]
+        user_habits = HabitRecord.query.filter_by(
+            user_id=user_id, date_completed=is_today()
+        ).all()
+        completed_habits = [habit.habit.name for habit in user_habits]
+        return jsonify(completed_habits), 200
+    return jsonify({"error": "User not logged in"}), 401
+
+
 if __name__ == "__main__":
-    app.run(debug=True)  # host="0.0.0.0"
+    app.run(debug=True, host="0.0.0.0")  # host="0.0.0.0"

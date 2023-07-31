@@ -101,7 +101,7 @@ document
         console.log(activityId);
         var notes = document.getElementById("notes").value;
 
-        fetch("/add_record", {
+        fetch("/save_record", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -147,47 +147,46 @@ document.getElementById("activitySelect").addEventListener("change", function ()
             document.getElementById("activityData").style.display = "block";
 
         });
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const habitsList = document.getElementById("habitsList");
-
-        // Fetch the list of habit names from the server
-        fetch("/get_habit_names")
-            .then((response) => response.json())
-            .then((data) => {
-                const habitNames = data.habit_names;
-                for (const habitName of habitNames) {
-                    // Create a new checkbox element for each habit
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-                    checkbox.name = "habit";
-                    checkbox.value = habitName;
-
-                    // Create a label for the checkbox
-                    const label = document.createElement("label");
-                    label.textContent = habitName;
-
-                    // Append the checkbox and label to the habitsList element
-                    habitsList.appendChild(checkbox);
-                    habitsList.appendChild(label);
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching habit names:", error);
-            });
-    });
-
 });
 
+
+// document.addEventListener("DOMContentLoaded", function () {
+//     const habitsList = document.getElementById("habitsList");
+
+//     // Fetch the list of habit names from the server
+//     fetch("/get_habit_names")
+//         .then((response) => response.json())
+//         .then((data) => {
+//             const habitNames = data.habit_names;
+//             for (const habitName of habitNames) {
+//                 // Create a new checkbox element for each habit
+//                 const checkbox = document.createElement("input");
+//                 checkbox.type = "checkbox";
+//                 checkbox.name = "habit";
+//                 checkbox.value = habitName;
+
+//                 // Create a label for the checkbox
+//                 const label = document.createElement("label");
+//                 label.textContent = habitName;
+
+//                 // Append the checkbox and label to the habitsList element
+//                 habitsList.appendChild(checkbox);
+//                 habitsList.appendChild(label);
+//             }
+//         })
+//         .catch((error) => {
+//             console.error("Error fetching habit names:", error);
+//         });
+// });
+
+
+
 document.addEventListener("DOMContentLoaded", function () {
-    // Get the list of habits
     const habitsList = document.getElementById("habitsList");
-    console.log(habitsList)
     // Get the completed habits from the session (if any)
     const sessionCompletedHabits = JSON.parse(habitsList.getAttribute("data-completed-habits"));
     console.log(sessionCompletedHabits)
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name="habit"]');
-    console.log(checkboxes)
     // Function to check if a habit is completed for today
     function isHabitCompleted(habitId) {
         return sessionCompletedHabits && sessionCompletedHabits.includes(habitId);
@@ -281,3 +280,62 @@ function unmarkHabitCompleted(habitId) {
             console.error("Error unmarking habit:", error);
         });
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const addHabitForm = document.getElementById("habitsForm");
+
+    // Add event listener for the form submission
+    addHabitForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        // Get the new habit name from the form input
+        const newHabitName = document.getElementById("habitName").value;
+
+        // Send a POST request to the server to add the new habit
+        fetch("/add_habit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: newHabitName }),
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                // After successfully adding the habit, you can update the UI or perform any other actions as needed.
+                console.log("New habit added:", data);
+
+                // For example, you can clear the form input field after adding the habit.
+                document.getElementById("habitName").value = "";
+
+            })
+            .catch((error) => {
+                console.error("Error adding habit:", error);
+            });
+    });
+});
+
+function markCompletedHabitsAsDone(completedHabits) {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name="habit"]');
+    checkboxes.forEach((checkbox) => {
+        const habitName = checkbox.value;
+        if (completedHabits.includes(habitName)) {
+            checkbox.checked = true;
+            checkbox.nextElementSibling.classList.add("done");
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Fetch the completed habits from the server
+    fetch("/get_completed_habits")
+        .then((response) => response.json())
+        .then((data) => {
+            const completedHabits = data;
+            markCompletedHabitsAsDone(completedHabits);
+        })
+        .catch((error) => {
+            console.error("Error fetching completed habits:", error);
+        });
+
+    // Rest of the code...
+});
