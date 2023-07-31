@@ -84,7 +84,7 @@ class HabitRecord(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     habit_id = db.Column(db.Integer, db.ForeignKey("habit.id"), nullable=False)
     date_completed = db.Column(db.Date, nullable=False, default=datetime.date.today)
-
+    time_completed = db.Column(db.Text, nullable=False)
     # Add the relationships to the User and Habit models
     user = db.relationship("User", backref=db.backref("habit_records", lazy=True))
     habit = db.relationship("Habit", backref=db.backref("habit_records", lazy=True))
@@ -102,10 +102,25 @@ def get_activity_id(activity_name):
         return None
 
 
-def is_today2():
-    return datetime.datetime.combine(
-        datetime.date.today(), datetime.datetime.min.time()
-    )
+def delete_record(habit_id):
+    try:
+        # Query the first row with habit_id and order by id in descending order
+        first_habit_record = (
+            HabitRecord.query.filter_by(habit_id=habit_id)
+            .order_by(HabitRecord.id.desc())
+            .first()
+        )
+
+        if first_habit_record:
+            db.session.delete(first_habit_record)
+            db.session.commit()
+            print(
+                f"Successfully deleted the first habit record with habit_id = {habit_id}"
+            )
+        else:
+            print(f"No habit record found with habit_id = {habit_id}")
+    except Exception as e:
+        print("Error deleting the habit record:", e)
 
 
 def is_today():
@@ -334,7 +349,6 @@ def get_activity_data(activity_name):
 @app.route("/mark_habit_completed/<string:habit_name>", methods=["POST"])
 def mark_habit_completed(habit_name):
     if "user" in session:
-        print(habit_name)
         user_id = session["user"]["id"]
         habit = Habit.query.filter_by(name=habit_name).first()
         print(user_id, habit.id)
@@ -347,7 +361,11 @@ def mark_habit_completed(habit_name):
 
         if not existing_record:
             # Record the completed habit for today
-            habit_record = HabitRecord(user_id=user_id, habit_id=habit.id)
+            habit_record = HabitRecord(
+                user_id=user_id,
+                habit_id=habit.id,
+                time_completed=datetime.datetime.now().time(),
+            )
             db.session.add(habit_record)
             db.session.commit()
 
@@ -358,31 +376,45 @@ def mark_habit_completed(habit_name):
 
 
 # THIS NEEDS WORK
-@app.route("/unmark_habit_completed/<int:habit_id>", methods=["POST"])
-def unmark_habit_completed(habit_id):
-    # First, check if the user is logged in. If not, return an error response.
-    if "user" not in session:
-        return jsonify({"error": "User not logged in"}), 401
+@app.route("/unmark_habit_completed/<string:habit_name>", methods=["POST"])
+def unmark_habit_completed(habit_name):
+    if "user" in session:
+        # user_id = session["user"]["id"]
+        habit = Habit.query.filter_by(name=habit_name).first()
+        delete_record(habit.id)
+        # if not existing_record:
+        #     # Record the completed habit for today
+        #     habit_record = HabitRecord(user_id=user_id, habit_id=habit.id)
+        #     db.session.add(habit_record)
+        #     db.session.commit()
 
-    user_id = session["user"]["id"]
+        return jsonify({"status": "success"}), 200
 
-    # Check if the user has the habit marked as completed.
-    # If not, we don't need to do anything and can return a success response.
-    user_habit = UserHabit.query.filter_by(user_id=user_id, habit_id=habit_id).first()
-    if not user_habit or not user_habit.completed_on:
-        return jsonify({"message": "Habit not marked as completed"}), 200
+    else:
+        return jsonify({"status": "error", "message": "User not logged in"}), 401
 
-    # If the user has the habit marked as completed, unmark it by setting completed_on to None.
-    user_habit.completed_on = None
-    db.session.commit()
+    # # First, check if the user is logged in. If not, return an error response.
+    # if "user" not in session:
+    #     return jsonify({"error": "User not logged in"}), 401
 
-    return jsonify({"message": "Habit unmarked as completed"}), 200
+    # user_id = session["user"]["id"]
+
+    # # Check if the user has the habit marked as completed.
+    # # If not, we don't need to do anything and can return a success response.
+    # user_habit = UserHabit.query.filter_by(user_id=user_id, habit_id=habit_id).first()
+    # if not user_habit or not user_habit.completed_on:
+    #     return jsonify({"message": "Habit not marked as completed"}), 200
+
+    # # If the user has the habit marked as completed, unmark it by setting completed_on to None.
+    # user_habit.completed_on = None
+    # db.session.commit()
+
+    # return jsonify({"message": "Habit unmarked as completed"}), 200
 
 
 @app.route("/get_completed_habits", methods=["GET"])
 def get_completed_habits():
     if "user" in session:
-        print(is_today())
         user_id = session["user"]["id"]
         user_habits = HabitRecord.query.filter_by(
             user_id=user_id, date_completed=is_today()

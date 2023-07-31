@@ -1,6 +1,6 @@
-CREATE DATABASE wal_habits;
+CREATE DATABASE ;
 
-USE wal_habits;
+USE ;
 
 CREATE TABLE user (
     id INT AUTO_INCREMENT PRIMARY KEY,

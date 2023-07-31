@@ -150,37 +150,6 @@ document.getElementById("activitySelect").addEventListener("change", function ()
 });
 
 
-// document.addEventListener("DOMContentLoaded", function () {
-//     const habitsList = document.getElementById("habitsList");
-
-//     // Fetch the list of habit names from the server
-//     fetch("/get_habit_names")
-//         .then((response) => response.json())
-//         .then((data) => {
-//             const habitNames = data.habit_names;
-//             for (const habitName of habitNames) {
-//                 // Create a new checkbox element for each habit
-//                 const checkbox = document.createElement("input");
-//                 checkbox.type = "checkbox";
-//                 checkbox.name = "habit";
-//                 checkbox.value = habitName;
-
-//                 // Create a label for the checkbox
-//                 const label = document.createElement("label");
-//                 label.textContent = habitName;
-
-//                 // Append the checkbox and label to the habitsList element
-//                 habitsList.appendChild(checkbox);
-//                 habitsList.appendChild(label);
-//             }
-//         })
-//         .catch((error) => {
-//             console.error("Error fetching habit names:", error);
-//         });
-// });
-
-
-
 document.addEventListener("DOMContentLoaded", function () {
     const habitsList = document.getElementById("habitsList");
     // Get the completed habits from the session (if any)
@@ -210,11 +179,7 @@ document.addEventListener("DOMContentLoaded", function () {
         const habitName = checkbox.value;
         updateHabitAppearance(habitName);
     });
-    // // Update the appearance of habits on page load
-    // checkboxes.forEach((checkbox) => {
-    //     const habitId = checkbox.value;
-    //     updateHabitAppearance(habitId);
-    // });
+
     // Add event listener to update habit appearance on checkbox change
     habitCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener("change", function () {
@@ -227,20 +192,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
-
-    // Add event listener to update habit appearance on checkbox change
-    //     checkboxes.forEach((checkbox) => {
-    //         checkbox.addEventListener("change", function () {
-    //             const habitId = this.value;
-    //             const completed = this.checked;
-    //             if (completed) {
-    //                 markHabitCompleted(habitId);
-    //             } else {
-    //                 unmarkHabitCompleted(habitId);
-    //             }
-    //         });
-    //     });
 });
+
 // Function to handle marking a habit as completed
 function markHabitCompleted(habitId) {
     fetch(`/mark_habit_completed/${habitId}`, {
@@ -311,6 +264,9 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch((error) => {
                 console.error("Error adding habit:", error);
             });
+        setTimeout(function () {
+            window.location.reload();
+        }, 500);
     });
 });
 
