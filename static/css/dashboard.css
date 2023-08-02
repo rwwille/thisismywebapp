@@ -18,6 +18,7 @@ button {
   background-color: #007bff;
   color: white;
   border: none;
+  border-radius: 15px;
   padding: 10px 20px;
   text-align: center;
   text-decoration: none;
@@ -32,4 +33,15 @@ button:disabled {
 }
 ul {
   list-style: none;
+}
+@media screen and (max-width: 1000px) {
+  h1{
+    font-size:30px;
+  }
+  body {
+    zoom: 300%
+  }
+  label{
+    font-size:30px;
+  }
 }

@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
-import datetime
+import datetime, pytz
 import math
 import config
 
@@ -17,6 +17,8 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:{}@localhost/{}".f
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
+pst = pytz.timezone("US/Pacific")
 
 # junction table
 UserActivity = db.Table(
@@ -80,10 +82,11 @@ class ActivityRecord(db.Model):
 
 
 class HabitRecord(db.Model):
+    now = datetime.datetime.now(pst)
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     habit_id = db.Column(db.Integer, db.ForeignKey("habit.id"), nullable=False)
-    date_completed = db.Column(db.Date, nullable=False, default=datetime.date.today)
+    date_completed = db.Column(db.Date, nullable=False, default=now.today())
     time_completed = db.Column(db.Text, nullable=False)
     # Add the relationships to the User and Habit models
     user = db.relationship("User", backref=db.backref("habit_records", lazy=True))
@@ -280,9 +283,13 @@ def get_activity_data(activity_name):
         records = ActivityRecord.query.filter(
             ActivityRecord.activity_id == activity.id
         ).all()
-
+        print(records[-1].elapsed_time)
         last_pt = str(records[-1].elapsed_time / 60000).split(".")
+        print(last_pt)
         last_pt[1] = str(round(float("." + last_pt[1]) * 60))
+        if len(last_pt[1]) == 1:
+            last_pt[1] = "0" + last_pt[1]
+        print(last_pt)
         last_pt = last_pt[0] + ":" + last_pt[1]
 
         total_time_ms = sum([record.elapsed_time for record in records])
@@ -307,6 +314,7 @@ def get_activity_data(activity_name):
         display_total_time = "{}:{}:{}".format(hours, minutes, seconds)
         notes = [record.notes for record in records]
         last_prac = notes[-1:][0].upper()
+        print("last practice", last_pt)
         data = {
             "name": activity.name.upper(),
             "total_time": display_total_time,
@@ -319,42 +327,18 @@ def get_activity_data(activity_name):
     return jsonify(data)
 
 
-# I DONT THINK ANYTHING IS CALLING THIS???
-# @app.route("/complete_habit", methods=["POST"])
-# def complete_habit():
-#     if "user" in session:
-#         user_id = session["user"]["id"]
-#         habit_name = request.json.get("habit_id")
-#         habit = Habit.query.filter_by(name=habit_name).first()
-#         print(user_id, habit.id)
-
-#         # Check if the habit is already recorded for today
-#         today = datetime.date.today()
-#         existing_record = HabitRecord.query.filter_by(
-#             user_id=user_id, habit_id=habit.id, date_completed=today
-#         ).first()
-
-#         if not existing_record:
-#             # Record the completed habit for today
-#             habit_record = HabitRecord(user_id=user_id, habit_id=habit.id)
-#             db.session.add(habit_record)
-#             db.session.commit()
-
-#         return jsonify({"status": "success"}), 200
-
-#     else:
-#         return jsonify({"status": "error", "message": "User not logged in"}), 401
-
-
 @app.route("/mark_habit_completed/<string:habit_name>", methods=["POST"])
 def mark_habit_completed(habit_name):
     if "user" in session:
+        # the VPS time is UTC and we want to make sure things record locally
+        now = datetime.datetime.now(pst)
         user_id = session["user"]["id"]
         habit = Habit.query.filter_by(name=habit_name).first()
         print(user_id, habit.id)
 
         # Check if the habit is already recorded for today
-        today = datetime.date.today()
+        today = now.today()
+        print(today)
         existing_record = HabitRecord.query.filter_by(
             user_id=user_id, habit_id=habit.id, date_completed=today
         ).first()
@@ -364,8 +348,9 @@ def mark_habit_completed(habit_name):
             habit_record = HabitRecord(
                 user_id=user_id,
                 habit_id=habit.id,
-                time_completed=datetime.datetime.now().time(),
+                time_completed=datetime.datetime.now(pst).time(),
             )
+            print(datetime.datetime.now().time())
             db.session.add(habit_record)
             db.session.commit()
 
@@ -425,4 +410,4 @@ def get_completed_habits():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")  # host="0.0.0.0"
+    app.run(debug=True)  # host="0.0.0.0"
