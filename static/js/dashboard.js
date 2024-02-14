@@ -5,7 +5,6 @@ document
 
         const newActivityName =
             document.getElementById("newActivityName").value;
-        console.log(newActivityName);
 
         fetch("/add_activity", {
             method: "POST",
@@ -129,24 +128,39 @@ document
                 }
             })
             .catch((error) => console.error("Error:", error));
+        location.reload();
     });
 
 
-document.getElementById("activitySelect").addEventListener("change", function () {
-    var sel = document.getElementById("activitySelect");
-    var selectedActivity = sel.options[sel.selectedIndex].text;
-    console.log(selectedActivity);
-    fetch('/get_activity_data/' + selectedActivity).then(response => response.json())
-        .then(data => {
-            // update the HTML content of the page with the fetched data
-            document.getElementById("activityData").innerHTML =
-                '<p>Activity: ' + data.name + '</p>' +
-                '<p>Total Time: ' + data.total_time + '</p>' +
-                '<p>10,000 Hours: ' + data.percent + '</p>' +
-                '<p>Previous: ' + data.last_pt + " --- " + data.last_prac + '</p>';
-            document.getElementById("activityData").style.display = "block";
+document.addEventListener("DOMContentLoaded", function () {
+    // Function to update activity data
+    function updateActivityData(selectedActivity) {
+        fetch('/get_activity_data/' + selectedActivity)
+            .then(response => response.json())
+            .then(data => {
+                // update the HTML content of the page with the fetched data
+                document.getElementById("activityData").innerHTML =
+                    '<p>Activity: ' + data.name + '</p>' +
+                    '<p>Total Time: ' + data.total_time + '</p>' +
+                    '<p>10,000 Hours: ' + data.percent + '</p>' +
+                    '<p>Previous: ' + data.last_pt + " --- " + data.last_prac + '</p>';
+                document.getElementById("activityData").style.display = "block";
+            })
+            .catch(error => {
+                console.error("Error fetching activity data:", error);
+            });
+    }
 
-        });
+    // Add change event listener to activitySelect
+    document.getElementById("activitySelect").addEventListener("change", function () {
+        var sel = document.getElementById("activitySelect");
+        var selectedActivity = sel.options[sel.selectedIndex].text;
+        updateActivityData(selectedActivity);
+    });
+
+    // Trigger the change event when the page loads
+    var initialSelectedActivity = document.getElementById("activitySelect").options[0].text;
+    updateActivityData(initialSelectedActivity);
 });
 
 
@@ -154,7 +168,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const habitsList = document.getElementById("habitsList");
     // Get the completed habits from the session (if any)
     const sessionCompletedHabits = JSON.parse(habitsList.getAttribute("data-completed-habits"));
-    console.log(sessionCompletedHabits)
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name="habit"]');
     // Function to check if a habit is completed for today
     function isHabitCompleted(habitId) {
@@ -295,3 +308,97 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Rest of the code...
 });
+
+let todos = [];
+let todoItemInput = ""
+
+document.querySelector("#recordActivityForm").addEventListener("submit", function (event) {
+    const selectedActivity = document.querySelector("#activitySelect").value;
+    if (selectedActivity === "") {
+        event.preventDefault(); // Prevent form submission
+        alert("Please select an activity."); // Display a message to the user
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Fetch the to-do list when the page loads
+    fetch("/get_todos")
+        .then((response) => response.json())
+        .then((data) => {
+            const todosList = document.getElementById("todosList");
+            updateTodosList(data.todos);
+        })
+        .catch((error) => console.error("Error fetching to-do list:", error));
+
+    // ... (existing code)
+
+    const todosForm = document.getElementById("todosForm");
+    const todoItemInput = document.getElementById("todoItem");
+
+    todosForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        const newTodo = todoItemInput.value.trim();
+        console.log(newTodo)
+        if (newTodo !== "") {
+            addTodoItem(newTodo);
+        }
+    });
+});
+
+function addTodoItem(item) {
+    fetch("/add_todo", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ item }),
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            // Update the UI with the new to-do item
+            // updateTodosList([...todos, data]);
+            console.log(data)
+            todoItemInput.value = ""; // Clear the input field
+        })
+        .then(() => {
+            location.reload();
+        })
+        .catch((error) => console.error("Error adding to-do item:", error));
+}
+
+function markTodoCompleted(todoId) {
+    fetch(`/complete_todo/${todoId}`, {
+        method: "POST",
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            // Update the UI to reflect the completion
+            updateTodosList(todos.map((item) => (item.id === todoId ? { ...item, completed: true } : item)));
+        })
+        .then(() => {
+            location.reload();
+        })
+        .catch((error) => console.error("Error completing to-do item:", error));
+}
+
+function updateTodosList(updatedTodos) {
+    // Update the UI with the list of to-do items
+    const todosList = document.getElementById("todosList");
+    todosList.innerHTML = "";
+    updatedTodos.forEach((item) => {
+        const todoElement = document.createElement("div");
+        todoElement.innerHTML = `
+            <input type="checkbox" name="todo" value="${item.id}" ${item.completed ? "checked" : ""} />
+            <label id="myLabel">${item.item}</label><br />
+            ${item.date_created ? `Created: ${item.date_created}<br />` : ""}
+            ${item.completed && item.date_completed ? `Completed: ${item.date_completed}<br />` : ""}
+        `;
+        todoElement.querySelector("input").addEventListener("change", function () {
+            const completed = this.checked;
+            if (completed) {
+                markTodoCompleted(item.id);
+            }
+        });
+        todosList.appendChild(todoElement);
+    });
+}

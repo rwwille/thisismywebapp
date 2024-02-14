@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, session, redirect, url_for, j
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 import pymysql
-import datetime, pytz
+import datetime
 import math
 import config
 
@@ -18,7 +18,6 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-pst = pytz.timezone("US/Pacific")
 
 # junction table
 UserActivity = db.Table(
@@ -82,15 +81,23 @@ class ActivityRecord(db.Model):
 
 
 class HabitRecord(db.Model):
-    now = datetime.datetime.now(pst)
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     habit_id = db.Column(db.Integer, db.ForeignKey("habit.id"), nullable=False)
-    date_completed = db.Column(db.Date, nullable=False, default=now.today())
+    date_completed = db.Column(db.Date, nullable=False)  # default=datetime.date.today()
     time_completed = db.Column(db.Text, nullable=False)
     # Add the relationships to the User and Habit models
     user = db.relationship("User", backref=db.backref("habit_records", lazy=True))
     habit = db.relationship("Habit", backref=db.backref("habit_records", lazy=True))
+
+
+class ToDoItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    item = db.Column(db.String(255), nullable=False)
+    completed = db.Column(db.Boolean, default=False)
+    date_created = db.Column(db.DateTime, default=datetime.datetime.now)
+    date_completed = db.Column(db.DateTime, nullable=True)
 
 
 with app.app_context():
@@ -234,7 +241,6 @@ def add_habit():
         user = User.query.get(user_id)
         user.user_habits.append(habit)
         db.session.commit()
-        print("You are most successful!")
         return redirect(
             url_for("dashboard")
         )  # Redirect to the dashboard after adding the habit
@@ -283,13 +289,10 @@ def get_activity_data(activity_name):
         records = ActivityRecord.query.filter(
             ActivityRecord.activity_id == activity.id
         ).all()
-        print(records[-1].elapsed_time)
         last_pt = str(records[-1].elapsed_time / 60000).split(".")
-        print(last_pt)
         last_pt[1] = str(round(float("." + last_pt[1]) * 60))
         if len(last_pt[1]) == 1:
             last_pt[1] = "0" + last_pt[1]
-        print(last_pt)
         last_pt = last_pt[0] + ":" + last_pt[1]
 
         total_time_ms = sum([record.elapsed_time for record in records])
@@ -331,14 +334,12 @@ def get_activity_data(activity_name):
 def mark_habit_completed(habit_name):
     if "user" in session:
         # the VPS time is UTC and we want to make sure things record locally
-        now = datetime.datetime.now(pst)
+        now = datetime.datetime.now()
         user_id = session["user"]["id"]
         habit = Habit.query.filter_by(name=habit_name).first()
-        print(user_id, habit.id)
 
         # Check if the habit is already recorded for today
-        today = now.today()
-        print(today)
+        today = now.date()
         existing_record = HabitRecord.query.filter_by(
             user_id=user_id, habit_id=habit.id, date_completed=today
         ).first()
@@ -348,9 +349,9 @@ def mark_habit_completed(habit_name):
             habit_record = HabitRecord(
                 user_id=user_id,
                 habit_id=habit.id,
-                time_completed=datetime.datetime.now(pst).time(),
+                time_completed=now.time(),
+                date_completed=today,
             )
-            print(datetime.datetime.now().time())
             db.session.add(habit_record)
             db.session.commit()
 
@@ -378,24 +379,6 @@ def unmark_habit_completed(habit_name):
     else:
         return jsonify({"status": "error", "message": "User not logged in"}), 401
 
-    # # First, check if the user is logged in. If not, return an error response.
-    # if "user" not in session:
-    #     return jsonify({"error": "User not logged in"}), 401
-
-    # user_id = session["user"]["id"]
-
-    # # Check if the user has the habit marked as completed.
-    # # If not, we don't need to do anything and can return a success response.
-    # user_habit = UserHabit.query.filter_by(user_id=user_id, habit_id=habit_id).first()
-    # if not user_habit or not user_habit.completed_on:
-    #     return jsonify({"message": "Habit not marked as completed"}), 200
-
-    # # If the user has the habit marked as completed, unmark it by setting completed_on to None.
-    # user_habit.completed_on = None
-    # db.session.commit()
-
-    # return jsonify({"message": "Habit unmarked as completed"}), 200
-
 
 @app.route("/get_completed_habits", methods=["GET"])
 def get_completed_habits():
@@ -409,5 +392,52 @@ def get_completed_habits():
     return jsonify({"error": "User not logged in"}), 401
 
 
+@app.route("/add_todo", methods=["POST"])
+def add_todo():
+    if "user" in session:
+        user_id = session["user"]["id"]
+        new_item = request.json.get("item")
+        todo_item = ToDoItem(user_id=user_id, item=new_item)
+        db.session.add(todo_item)
+        db.session.commit()
+        return jsonify({"id": todo_item.id, "item": todo_item.item}), 201
+    return jsonify({"error": "User not logged in"}), 401
+
+
+@app.route("/complete_todo/<int:todo_id>", methods=["POST"])
+def complete_todo(todo_id):
+    if "user" in session:
+        user_id = session["user"]["id"]
+        todo_item = ToDoItem.query.filter_by(id=todo_id, user_id=user_id).first()
+        if todo_item:
+            todo_item.completed = True
+            todo_item.date_completed = datetime.datetime.now()
+            db.session.commit()
+            return jsonify({"message": "ToDo item marked as completed"}), 200
+        return jsonify({"error": "ToDo item not found"}), 404
+    return jsonify({"error": "User not logged in"}), 401
+
+
+@app.route("/get_todos", methods=["GET"])
+def get_todos():
+    if "user" in session:
+        user_id = session["user"]["id"]
+        todo_items = ToDoItem.query.filter_by(user_id=user_id).all()
+        todos = [
+            {
+                "id": item.id,
+                "item": item.item,
+                "completed": item.completed,
+                "date_created": item.date_created.strftime("%Y-%m-%d %H:%M:%S"),
+                "date_completed": item.date_completed.strftime("%Y-%m-%d %H:%M:%S")
+                if item.date_completed
+                else None,
+            }
+            for item in todo_items
+        ]
+        return jsonify({"todos": todos}), 200
+    return jsonify({"error": "User not logged in"}), 401
+
+
 if __name__ == "__main__":
-    app.run(debug=True)  # host="0.0.0.0"
+    app.run(debug=True, host="0.0.0.0")

@@ -11,16 +11,7 @@
     <h1>Welcome {{ user.email }}!</h1>
     <div id="activitySection">
       <h2>Activity Recorder</h2>
-      <form id="newActivityForm">
-        <label for="newActivityName">New Activity:</label>
-        <input
-          type="text"
-          id="newActivityName"
-          name="newActivityName"
-          required
-        />
-        <input type="submit" value="Add Activity" />
-      </form>
+
       <form id="recordActivityForm">
         <label for="activitySelect">Select Activity:</label>
         <select id="activitySelect" name="activity_id">
@@ -38,25 +29,50 @@
         <input type="submit" value="Save Record" id="saveButton" disabled />
       </form>
       <div id="activityData"></div>
+      <form id="newActivityForm">
+        <label for="newActivityName">New Activity:</label>
+        <input
+          type="text"
+          id="newActivityName"
+          name="newActivityName"
+          required
+        />
+        <input type="submit" value="Add Activity" />
+      </form>
     </div>
     <div id="habitsSection">
       <h2>Habit Tracker</h2>
-      <form id="habitsForm">
-        <label for="habitName">Habit Name:</label>
-        <input type="text" id="habitName" name="habitName" required />
-        <input type="submit" value="Add Habit" />
-      </form>
+
       <div id="habitsList">
         {% for habit_name in habit_names %}
         <input type="checkbox" name="habit" value="{{ habit_name }}" />
         <label>{{ habit_name }}</label><br />
         {% endfor %}
       </div>
+      <p></p>
+      <form id="habitsForm">
+        <label for="habitName">Habit Name:</label>
+        <input type="text" id="habitName" name="habitName" required />
+        <input type="submit" value="Add Habit" />
+      </form>
     </div>
+
     <div
       id="habitsList"
       data-completed-habits="{{ completed_habit_ids | tojson }}"
     ></div>
+
+    <div id="todosSection">
+      <h2>Running To-Do List</h2>
+      <div id="todosList"></div>
+      <p></p>
+      <form id="todosForm">
+        <label for="todoItem">New Item:</label>
+        <input type="text" id="todoItem" name="todoItem" required />
+        <input type="submit" value="Add Item" />
+      </form>
+    </div>
+
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
   </body>
 </html>
